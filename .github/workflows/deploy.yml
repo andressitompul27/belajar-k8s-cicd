@@ -1,4 +1,4 @@
-name: CI/CD Pemula ke K8s
+name: CI/CD Lokal ke Minikube
 
 on:
   push:
@@ -7,26 +7,25 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
-    - name: Checkout Code
+    - name: 1. Ambil Kode Terbaru dari Git
       uses: actions/checkout@v4
 
-    - name: Login ke Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    - name: Build dan Push Docker Image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/app-pemula:latest
-
-    - name: Deploy ke Local Kubernetes
+    - name: 2. Build Docker Image Secara Lokal
       run: |
-        echo "Langkah otomatisasi deployment."
-        echo "Ketik manual di Ubuntu: microk8s kubectl apply -f k8s/"
+        docker build -t hello-devops:latest .
+
+    - name: 3. Muat Image Baru ke Minikube
+      run: |
+        minikube image load hello-devops:latest
+
+    - name: 4. Deploy Ulang ke Kubernetes
+      run: |
+        minikube kubectl -- apply -f k8s/deployment.yaml
+        minikube kubectl -- apply -f k8s/service.yaml
+        
+    - name: 5. Paksa Kubernetes Lakukan Rolling Update
+      run: |
+        minikube kubectl -- rollout restart deployment/app-pemula-deployment
